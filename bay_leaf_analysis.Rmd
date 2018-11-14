@@ -1,0 +1,235 @@
+---
+title: "The Great Bay Leaf Experiment"
+author: "Abby Kaplan"
+date: "November 12, 2018"
+output: html_document
+---
+
+```{r setup, echo = F, message = F, warning = F}
+library(knitr)
+library(kableExtra)
+library(tibble)
+library(tidyr)
+library(dplyr)
+library(arm)
+library(rstan)
+library(ggplot2)
+theme_set(theme_bw())
+```
+
+![](bay_leaves.jpg)
+
+## Research question
+
+When you include a bay leaf in a recipe, does it actually make the food taste better?
+
+### Things that are *not* my research question
+
+* Does a bay leaf have a detectable flavor if you just chew on it?
+* If you boil bay leaves in plain water, can you taste the difference?
+* Can a professional chef taste the difference that high-quality bay leaves make in an expertly-prepared dish?
+
+### A more specific version of my research question
+
+When an average person uses average bay leaves in an average recipe, will that person notice a difference in how the food tastes?
+
+## Prior research
+
+Kelly Conaboy at [The Awl](https://www.theawl.com/2016/03/the-vast-bay-leaf-conspiracy/) asked several chefs about bay leaves, and almost all said they're beneficial.  Several said that only fresh bay leaves work.
+
+[Bon Appetit](https://www.bonappetit.com/story/bay-leaves-taste) says that if you boil bay leaves in water and then drink the water, you can taste the bay leaves.
+
+J. Kenji López-Alt at [Serious Eats](https://www.seriouseats.com/2014/03/ask-the-food-lab-whats-the-point-of-bay-leaves.html) also recommends the boil-them-in-water-and-taste-the-difference method.  He argues for using dried bay leaves because fresh bay leaves are too strong.
+
+Claire Lower tested bay leaves for [Lifehacker](https://skillet.lifehacker.com/do-bay-leaves-even-do-anything-1793275685): she cooked three batches of rice with bay leaves (one with fresh leaves, one with newly bought dry leaves, and one with old dry leaves) and three without.  She could taste a difference between the batches with bay leaves and the batches without.  The test was not blind.
+
+Zach and Clay at [The Bitten Word](https://www.thebittenword.com/thebittenword/2013/02/bay-leaves-worthless-recipe-pressure-cooker-chicken-stock.html) did a blind taste-test of two batches of chicken stock.  They preferred the batch that had bay leaf, but they thought the difference was very subtle.
+
+Lots of people argued that bay leaf is easier to taste in a milder dish.  Several singled out beef stew as an example of a dish where the bay leaf would be hard to notice.
+
+## The experiment
+
+Some very kind friends and family agreed to humor me by taste-testing food that had been prepared with and without bay leaves.  I've performed the experiment on a couple of separate occasions; let's call each occasion a "batch".  A batch proceeds as follows:
+
+### Step 1: Prepare as many separate portions of the dish as possible
+
+The more separate portions we have, the more data we can get.  It's not enough to have just two portions of the dish (one with bay leaf and one without); even if people prefer the one with bay leaf, we can't be sure that it was *because* of the bay leaf.  There's always another possibile explanation:
+
+* If I cooked the two portions completely separately, maybe the carrot that I used for the one with bay leaf was slightly more delicious than the carrot I used for the one without (because it grew in better soil, or it was a few hours fresher, or whatever).
+* If I cooked the two portions together for a while and then separated them so I could add the bay leaf to half, maybe I happened to scoop a few more grams of onion into the half that got the bay leaf.
+* If it's a dish that's uniform (i.e., no "chunks" -- think chicken stock instead of stew), maybe I served them in bowls that added slightly different tastes (because they were washed with different soap, or in different parts of the dishwasher, or something).
+
+### Step 2: Put the portions into pairs: one portion with bay leaf, one without
+
+Any given pair might have any of the problems listed above.  But if we make many pairs, it's extremely unlikely that *every* portion with bay leaf also happens to have some other advantage over its partner.  If people consistently prefer the portion with bay leaf across many pairs, we can be pretty confident that the bay leaf really is responsible.
+
+### Step 3: Have people test each pair blindly and choose the portion they prefer
+
+I labelled the bowls in each pair and gave each person a sheet of paper for recording their preferences.
+
+```{r sample_data_sheet, echo = F, out.width = "50%", out.extra = 'style="border: 3px solid black"'}
+include_graphics("sample_data_sheet.png")
+```
+
+I didn't get IRB approval for any of this.  I believe this experiment falls under the "taste and food quality evaluation" exemption for human subjects research.
+
+## Raw data
+
+```{r load_data, echo = F, message = F, warning = F}
+# Load the raw data from csv files.  The first file has observation-level data;
+# the second has batch-level data.
+obs.df = read.csv("bay_leaf_observations.csv")
+batch.df = read.csv("bay_leaf_batches.csv")
+# Add IDs to the rows in the observation-level data; useful for associating a
+# single observation with multiple posterior predictions later.
+obs.df = obs.df %>%
+  rownames_to_column("obs.id")
+# Prepare the data for Stan: convert IDs and outcomes to integers.  (They
+# should already be integers, but just in case.)
+obs.df = obs.df %>%
+  mutate(int.batch.id = as.numeric(as.factor(batch.id)),
+         int.subject.id = as.numeric(as.factor(subject.id)),
+         int.pair.id = as.numeric(as.factor(pair.id)),
+         int.prefer.bay.leaf = ifelse(prefer.bay.leaf , 1, 0))
+```
+
+In addition to my data, I'm including Zach and Clay's experiment at [The Bitten Word](https://www.thebittenword.com/thebittenword/2013/02/bay-leaves-worthless-recipe-pressure-cooker-chicken-stock.html), because their procedure was the same as mine in the most important respects: a pair of portions that were as similar as possible, and a blind head-to-head comparison.  I'm crediting them with two observations (one for each person), although it sounds like Zach and Clay discussed their impressions with each other before deciding on the portion they preferred, which would mean their observations weren't actually independent.  I'm willing to live with this.
+
+All together, we now have a total of `r nrow(batch.df)` batches:
+
+```{r list_batches, echo = F, message = F, warning = F}
+obs.df %>%
+  group_by(batch.id) %>%
+  summarize(num.subjects = n_distinct(subject.id),
+            num.pairs = n_distinct(pair.id),
+            num.observations = n()) %>%
+  inner_join(batch.df, by = c("batch.id")) %>%
+  dplyr::select(batch.id, batch.recipe, num.subjects, num.pairs,
+                num.observations) %>%
+  kable(col.names = c("Batch ID", "Recipe", "# subjects", "# pairs", "# observations")) %>%
+  kable_styling(full_width = T)
+```
+
+To get a preliminary sense of the data, let's look at some raw numbers.  How often did people prefer the portion with bay leaf?
+
+```{r plot_raw_data, echo = F, message = F, warning = F, fig.width = 4, fig.height = 4}
+ggplot(obs.df, aes(x = prefer.bay.leaf)) +
+  geom_bar() +
+  scale_x_discrete("preferred bay leaf") +
+  scale_y_continuous("number of observations")
+```
+
+Out of `r format(nrow(obs.df), big.mark = ",")` observations, people preferred the portion with bay leaf in `r format(sum(obs.df$prefer.bay.leaf), big.mark = ",")` cases: `r round(sum(obs.df$prefer.bay.leaf) / nrow(obs.df), 2) * 100`% of the time.  That's a trend in the right direction, although it's not overwhelming.
+
+But is this slight preference for bay leaf reliable, or could it be a fluke?  What happens when we do a careful statistical analysis?
+
+## Analysis in Stan
+
+Click [here](bay_leaf_analysis_model.html) for details on the model.
+
+If you're not familiar with Bayesian modeling in Stan, think of it this way: we specify the parameters of the model (e.g., a parameter for "overall probability of preferring the portion with bay leaf"); Stan tries out a bunch of different possible values for the parameter and tests them against our data.  What we get from Stan, for each parameter, is a distribution of samples over possible values; there are more samples for the values that are more consistent with our data, and fewer samples for the values that are less consistent with our data. We can interpret these sampling distributions as estimates of how likely it is that a given parameter has a given value.
+
+## Evaluating the research question
+
+### Overall preference for bay leaf
+
+Do we have good evidence that, overall, people can detect bay leaf?  <span style="color:red">**Not really.**</span>  On the one hand, Stan is giving us more samples over 50% than under 50%, so that's promising.  But there are still plenty of samples where people are choosing bay leaf and non-bay-leaf portions equally often, or even preferring the portions *without* bay leaf.  So, given our dataset, we can't rule out the possibility that bay leaf does diddly squat.
+
+```{r plot_beta, echo = F, message = F, warning = F}
+sampled.params.long.df %>%
+  filter(parameter == "beta") %>%
+  mutate(prob.prefer.bay.leaf = invlogit(sampled.value)) %>%
+  ggplot(aes(x = prob.prefer.bay.leaf)) +
+  geom_histogram() +
+  geom_vline(xintercept = 0.5, col = "red") +
+  scale_x_continuous("overall probability of preferring bay leaf: invlogit(beta)") +
+  scale_y_continuous("number of samples")
+```
+
+### What about particular batches or subjects?
+
+But wait: maybe the bay leaf was overwhelmed by other ingredients in the recipe for some batches, or the bay leaf used in some batches was too old.  Is there any evidence that people could systematically detect the bay leaf in specific batches?  <span style="color:red">**Nope.**</span>  All the batches trend in the right direction (over 50% preference for bay leaf), but there's no batch where we can reliably say that people chose the portion with bay leaf more than half the time.  But as we saw in the [simulation](bay_leaf_analysis_model.html#simfit), we're working with such small amounts of data that even real effects at the batch level are going to be hard to find.  The best we can say here is that we fail to see convincing evidence for the goodness of bay leaf, not that we can be sure it *doesn't* help.
+
+```{r get_group_intercepts, eval = F, echo = F, message = F, warning = F}
+# Get group-level parameters and multiply them by their standard deviations.
+sampled.group.params.df = sampled.params.long.df %>%
+  filter(grepl("^(gamma|delta|epsilon)", parameter)) %>%
+  inner_join(sampled.params.long.df %>%
+               filter(is.element(parameter, c("sigma_gamma", "sigma_delta",
+                                              "sigma_epsilon"))),
+             by = c("draw.id", "parameter.group")) %>%
+  mutate(sampled.value = sampled.value.x * sampled.value.y) %>%
+  dplyr::select(draw.id, parameter.group, parameter.num = parameter.num.x,
+                sampled.value)
+```
+
+```{r plot_batch_intercepts, echo = F, message = F, warning = F}
+sampled.group.params.df %>%
+  filter(parameter.group == "gamma") %>%
+  inner_join(sampled.params.long.df %>%
+               filter(parameter == "beta") %>%
+               dplyr::select(draw.id, sampled.value),
+             by = c("draw.id")) %>%
+  mutate(est.prob = invlogit(sampled.value.x + sampled.value.y)) %>%
+  group_by(parameter.num) %>%
+  summarize(mean.prob.bay.leaf = mean(est.prob),
+            upper.95 = quantile(est.prob, 0.975),
+            upper.50 = quantile(est.prob, 0.75),
+            lower.50 = quantile(est.prob, 0.25),
+            lower.95 = quantile(est.prob, 0.025)) %>%
+  ggplot(aes(x = factor(parameter.num), y = mean.prob.bay.leaf)) +
+  geom_hline(yintercept = 0.5, col = "red") +
+  geom_point(size = 4) +
+  geom_errorbar(aes(ymin = lower.95, ymax = upper.95),
+                width = 0) +
+  geom_errorbar(aes(ymin = lower.50, ymax = upper.50),
+                width = 0, size = 2) +
+  scale_x_discrete("batch ID") +
+  scale_y_continuous("probability of preferring bay leaf: invlogit(beta + (gamma * sigma_gamma)); mean, 50% interval, 95% interval") +
+  coord_flip()
+```
+
+Similarly, we can't confidently conclude that any individual subject reliably prefers bay leaf.  But we're dealing with the same small-data problem.
+
+```{r plot_subject_intercepts, echo = F, message = F, warning = F}
+sampled.group.params.df %>%
+  filter(parameter.group == "delta") %>%
+  inner_join(sampled.params.long.df %>%
+               filter(parameter == "beta") %>%
+               dplyr::select(draw.id, sampled.value),
+             by = c("draw.id")) %>%
+  mutate(sampled.value = invlogit(sampled.value.x + sampled.value.y)) %>%
+  dplyr::select(draw.id, parameter.group, parameter.num, sampled.value) %>%
+  inner_join(obs.df %>%
+               dplyr::select(int.subject.id, int.batch.id) %>%
+               distinct(),
+             by = c("parameter.num" = "int.subject.id")) %>%
+  inner_join(sampled.params.long.df %>%
+               filter(grepl("^gamma", parameter)) %>%
+               dplyr::select(draw.id, parameter.num, sampled.value),
+             by = c("draw.id", "int.batch.id" = "parameter.num")) %>%
+  mutate(sampled.value = sampled.value.x + sampled.value.y) %>%
+  mutate(est.prob = invlogit(sampled.value)) %>%
+  group_by(parameter.num) %>%
+  summarize(mean.prob.bay.leaf = mean(est.prob),
+            upper.95 = quantile(est.prob, 0.975),
+            upper.50 = quantile(est.prob, 0.75),
+            lower.50 = quantile(est.prob, 0.25),
+            lower.95 = quantile(est.prob, 0.025)) %>%
+  ggplot(aes(x = factor(parameter.num), y = mean.prob.bay.leaf)) +
+  geom_hline(yintercept = 0.5, col = "red") +
+  geom_point(size = 4) +
+  geom_errorbar(aes(ymin = lower.95, ymax = upper.95),
+                width = 0) +
+  geom_errorbar(aes(ymin = lower.50, ymax = upper.50),
+                width = 0, size = 2) +
+  scale_x_discrete("subject ID") +
+  scale_y_continuous("probability of preferring bay leaf: invlogit(beta + (delta * sigma_delta)); mean, 50% interval, 95% interval") +
+  coord_flip()
+```
+
+## Conclusion
+
+People chose the sample with bay leaf a little more than half the time -- but not often enough that we can be sure the really do prefer bay leaf; the difference could just be a fluke.  If bay leaf really does make food taste better, it's a small effect.  We definitely need more data.
+
+This conclusion isn't going to affect my cooking behavior at all.  I'll still put in a bay leaf if the recipe calls for it.  Because it makes me feel fancy.

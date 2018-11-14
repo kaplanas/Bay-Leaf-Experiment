@@ -185,7 +185,11 @@ sampled.group.params.df %>%
   geom_errorbar(aes(ymin = lower.50, ymax = upper.50),
                 width = 0, size = 2) +
   scale_x_discrete("batch ID") +
-  scale_y_continuous("probability of preferring bay leaf: invlogit(beta + (gamma * sigma_gamma)); mean, 50% interval, 95% interval") +
+  scale_y_continuous(expression(paste("probability of preferring bay leaf: ",
+                                      logit^-1,
+                                      (beta + gamma[i] * sigma[gamma[i]]),
+                                      "; mean, 50% interval, 95% interval",
+                                      sep = ""))) +
   coord_flip()
 ```
 
@@ -224,7 +228,11 @@ sampled.group.params.df %>%
   geom_errorbar(aes(ymin = lower.50, ymax = upper.50),
                 width = 0, size = 2) +
   scale_x_discrete("subject ID") +
-  scale_y_continuous("probability of preferring bay leaf: invlogit(beta + (delta * sigma_delta)); mean, 50% interval, 95% interval") +
+  scale_y_continuous(expression(paste("probability of preferring bay leaf: ",
+                                      logit^-1,
+                                      (beta + gamma[i] * sigma[gamma[i]] + delta[j] * sigma[delta[j]]),
+                                      "; mean, 50% interval, 95% interval",
+                                      sep = ""))) +
   coord_flip()
 ```
 

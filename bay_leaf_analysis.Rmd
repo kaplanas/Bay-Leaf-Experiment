@@ -142,7 +142,10 @@ sampled.params.long.df %>%
   ggplot(aes(x = prob.prefer.bay.leaf)) +
   geom_histogram() +
   geom_vline(xintercept = 0.5, col = "red") +
-  scale_x_continuous("overall probability of preferring bay leaf: invlogit(beta)") +
+  scale_x_continuous(expression(paste("probability of preferring bay leaf: ",
+                                      logit^-1,
+                                      (beta),
+                                      sep = ""))) +
   scale_y_continuous("number of samples")
 ```
 

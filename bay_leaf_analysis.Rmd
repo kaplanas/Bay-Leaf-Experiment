@@ -1,7 +1,7 @@
 ---
 title: "The Great Bay Leaf Experiment"
 author: "Abby Kaplan"
-date: "November 12, 2018"
+date: "December 7, 2018"
 output: html_document
 ---
 
@@ -59,9 +59,15 @@ The more separate portions we have, the more data we can get.  It's not enough t
 * If I cooked the two portions together for a while and then separated them so I could add the bay leaf to half, maybe I happened to scoop a few more grams of onion into the half that got the bay leaf.
 * If it's a dish that's uniform (i.e., no "chunks" -- think chicken stock instead of stew), maybe I served them in bowls that added slightly different tastes (because they were washed with different soap, or in different parts of the dishwasher, or something).
 
+Any given pair might have any of the problems listed above.  But if we make many pairs, it's extremely unlikely that *every* portion with bay leaf also happens to have some other advantage over its partner.  If people consistently prefer the portion with bay leaf across many pairs, we can be pretty confident that the bay leaf really is responsible.
+
+To make sure the portions were truly independent, they were cooked completely separately (different pots, utensils, everything) from the point where bay leaf was added and onward.
+
+![](bay_leaf_methods.png)
+
 ### Step 2: Put the portions into pairs: one portion with bay leaf, one without
 
-Any given pair might have any of the problems listed above.  But if we make many pairs, it's extremely unlikely that *every* portion with bay leaf also happens to have some other advantage over its partner.  If people consistently prefer the portion with bay leaf across many pairs, we can be pretty confident that the bay leaf really is responsible.
+![](experiment_setup_small.png)
 
 ### Step 3: Have people test each pair blindly and choose the portion they prefer
 
@@ -102,7 +108,7 @@ obs.df %>%
   group_by(batch.id) %>%
   summarize(num.subjects = n_distinct(subject.id),
             num.pairs = n_distinct(pair.id),
-            num.observations = n()) %>%
+            num.observations = sum(ifelse(is.na(prefer.bay.leaf), 0, 1))) %>%
   inner_join(batch.df, by = c("batch.id")) %>%
   dplyr::select(batch.id, batch.recipe, num.subjects, num.pairs,
                 num.observations) %>%
@@ -119,7 +125,7 @@ ggplot(obs.df, aes(x = prefer.bay.leaf)) +
   scale_y_continuous("number of observations")
 ```
 
-Out of `r format(nrow(obs.df), big.mark = ",")` observations, people preferred the portion with bay leaf in `r format(sum(obs.df$prefer.bay.leaf), big.mark = ",")` cases: `r round(sum(obs.df$prefer.bay.leaf) / nrow(obs.df), 2) * 100`% of the time.  That's a trend in the right direction, although it's not overwhelming.
+Note that there were `r sum(ifelse(is.na(obs.df$prefer.bay.leaf), 1, 0))` cases where the subject didn't make a choice.  Out of the other `r format(nrow(obs.df %>% filter(!is.na(prefer.bay.leaf))), big.mark = ",")` observations, people preferred the portion with bay leaf in `r format(sum(obs.df$prefer.bay.leaf, na.rm = T), big.mark = ",")` cases: `r round(sum(obs.df$prefer.bay.leaf, na.rm = T) / nrow(obs.df %>% filter(!is.na(prefer.bay.leaf))), 2) * 100`% of the time.  That's a trend in the right direction, although it's not overwhelming.
 
 But is this slight preference for bay leaf reliable, or could it be a fluke?  What happens when we do a careful statistical analysis?
 
@@ -133,7 +139,9 @@ If you're not familiar with Bayesian modeling in Stan, think of it this way: we 
 
 ### Overall preference for bay leaf
 
-Do we have good evidence that, overall, people can detect bay leaf?  <span style="color:red">**Not really.**</span>  On the one hand, Stan is giving us more samples over 50% than under 50%, so that's promising.  But there are still plenty of samples where people are choosing bay leaf and non-bay-leaf portions equally often, or even preferring the portions *without* bay leaf.  So, given our dataset, we can't rule out the possibility that bay leaf does diddly squat.
+Do we have good evidence that, overall, people can detect bay leaf?  <span style="color:red">**Not really.**</span>
+
+On the one hand, Stan is giving us more samples over 50% than under 50%, so that's promising.  In other words, the hypothesis that people slightly prefer bay leaf is a little more likely, given this data, than the hypothesis that they don't care or even dislike bayleaf.  But there are still plenty of samples where people are choosing bay leaf and non-bay-leaf portions equally often, or even preferring the portions *without* bay leaf.  It's a little less likely, but it's still entirely possible.  So, given our dataset, we can't rule out the possibility that bay leaf does diddly squat.
 
 ```{r plot_beta, echo = F, message = F, warning = F}
 sampled.params.long.df %>%
@@ -151,7 +159,9 @@ sampled.params.long.df %>%
 
 ### What about particular batches or subjects?
 
-But wait: maybe the bay leaf was overwhelmed by other ingredients in the recipe for some batches, or the bay leaf used in some batches was too old.  Is there any evidence that people could systematically detect the bay leaf in specific batches?  <span style="color:red">**Nope.**</span>  All the batches trend in the right direction (over 50% preference for bay leaf), but there's no batch where we can reliably say that people chose the portion with bay leaf more than half the time.  But as we saw in the [simulation](bay_leaf_analysis_model.html#simfit), we're working with such small amounts of data that even real effects at the batch level are going to be hard to find.  The best we can say here is that we fail to see convincing evidence for the goodness of bay leaf, not that we can be sure it *doesn't* help.
+But wait: maybe the bay leaf was overwhelmed by other ingredients in the recipe for some batches, or the bay leaf used in some batches was too old.  Is there any evidence that people could systematically detect the bay leaf in specific batches?  <span style="color:red">**Nope.**</span>  All the batches trend in the right direction (over 50% preference for bay leaf), but there's no batch where we can reliably say that people chose the portion with bay leaf more than half the time.
+
+We should take this non-result with a grain of salt, of course.  As we saw in the [simulation](bay_leaf_analysis_model.html#simfit), we're working with such small amounts of data that even real effects at the batch level are going to be hard to find.  The best we can say here is that we fail to see convincing evidence for the goodness of bay leaf, not that we can be sure it *doesn't* help.
 
 ```{r get_group_intercepts, eval = F, echo = F, message = F, warning = F}
 # Get group-level parameters and multiply them by their standard deviations.
@@ -195,52 +205,10 @@ sampled.group.params.df %>%
                                       sep = ""))) +
   coord_flip()
 ```
-
-Similarly, we can't confidently conclude that any individual subject reliably prefers bay leaf.  But we're dealing with the same small-data problem.
-
-```{r plot_subject_intercepts, echo = F, message = F, warning = F}
-sampled.group.params.df %>%
-  filter(parameter.group == "delta") %>%
-  inner_join(sampled.params.long.df %>%
-               filter(parameter == "beta") %>%
-               dplyr::select(draw.id, sampled.value),
-             by = c("draw.id")) %>%
-  mutate(sampled.value = invlogit(sampled.value.x + sampled.value.y)) %>%
-  dplyr::select(draw.id, parameter.group, parameter.num, sampled.value) %>%
-  inner_join(obs.df %>%
-               dplyr::select(int.subject.id, int.batch.id) %>%
-               distinct(),
-             by = c("parameter.num" = "int.subject.id")) %>%
-  inner_join(sampled.params.long.df %>%
-               filter(grepl("^gamma", parameter)) %>%
-               dplyr::select(draw.id, parameter.num, sampled.value),
-             by = c("draw.id", "int.batch.id" = "parameter.num")) %>%
-  mutate(sampled.value = sampled.value.x + sampled.value.y) %>%
-  mutate(est.prob = invlogit(sampled.value)) %>%
-  group_by(parameter.num) %>%
-  summarize(mean.prob.bay.leaf = mean(est.prob),
-            upper.95 = quantile(est.prob, 0.975),
-            upper.50 = quantile(est.prob, 0.75),
-            lower.50 = quantile(est.prob, 0.25),
-            lower.95 = quantile(est.prob, 0.025)) %>%
-  ggplot(aes(x = factor(parameter.num), y = mean.prob.bay.leaf)) +
-  geom_hline(yintercept = 0.5, col = "red") +
-  geom_point(size = 4) +
-  geom_errorbar(aes(ymin = lower.95, ymax = upper.95),
-                width = 0) +
-  geom_errorbar(aes(ymin = lower.50, ymax = upper.50),
-                width = 0, size = 2) +
-  scale_x_discrete("subject ID") +
-  scale_y_continuous(expression(paste("probability of preferring bay leaf: ",
-                                      logit^-1,
-                                      (beta + gamma[i] * sigma[gamma[i]] + delta[j] * sigma[delta[j]]),
-                                      "; mean, 50% interval, 95% interval",
-                                      sep = ""))) +
-  coord_flip()
 ```
 
 ## Conclusion
 
-People chose the sample with bay leaf a little more than half the time -- but not often enough that we can be sure the really do prefer bay leaf; the difference could just be a fluke.  If bay leaf really does make food taste better, it's a small effect.  We definitely need more data.
+People chose the sample with bay leaf a little more than half the time -- but not often enough that we can be sure they really do prefer bay leaf; the difference could just be a fluke.  If bay leaf really does make food taste better, it's a small effect.  We definitely need more data.
 
 This conclusion isn't going to affect my cooking behavior at all.  I'll still put in a bay leaf if the recipe calls for it.  Because it makes me feel fancy.

@@ -19,7 +19,7 @@ parameters {
 }
 model {
   // priors
-  beta ~ normal(0, 1);
+  beta ~ normal(0, 2);
   sigma_gamma ~ cauchy(0, 1);
   gamma ~ normal(0, 1);
   sigma_delta ~ cauchy(0, 1);

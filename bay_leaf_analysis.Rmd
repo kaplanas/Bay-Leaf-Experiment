@@ -133,7 +133,7 @@ Note that there were `r sum(ifelse(is.na(obs.df$prefer.bay.leaf), 1, 0))` cases 
 
 But is this slight preference for bay leaf reliable, or could it be a fluke?  What happens when we do a careful statistical analysis?
 
-## Analysis in Stan
+## Analysis in Stan {.tabset}
 
 Skip this section if you're not interested in the technical details of the statistical model.
 
@@ -189,6 +189,12 @@ $$\sigma_\epsilon \in [0, \inf] \sim \mbox{Cauchy}(0, 1)$$
 
 $$\epsilon_k \sim \mbox{N}(0, 1)$$
 
+### Stan code
+
+```{r stan_model, echo = F, comment = NA}
+writeLines(readLines("bay_leaf_analysis.stan"))
+```
+
 ### Simulated data
 
 To test the specification of the model, let's simulate some data and test whether we can recover the true parameters.
@@ -204,9 +210,13 @@ sim.df = obs.df %>%
   dplyr::select(obs.id, int.batch.id, int.subject.id, int.pair.id)
 # List the simulations we're going to run, and their properties.
 simulations = data.frame(
-  sim = 1:5,
-  model.for.generation = c(1:4, 3),
-  model.for.fitting = c(1:4, 2)
+  sim = 1:4,
+  generate.batch = c(F, T, T, T),
+  fit.batch = c(F, T, T, T),
+  generate.subject = c(F, F, T, T),
+  fit.subject = c(F, F, T, T),
+  generate.pair = c(F, F, F, T),
+  fit.pair = c(F, F, F, T)
 )
 ```
 
@@ -214,13 +224,14 @@ simulations = data.frame(
 
 ```{r simulate_parameters, eval = F}
 # Simulate parameters by drawing from their priors.  For simulation purposes,
-# beta is drawn from a much narrower distribution than its prior in the model.
+# beta and the sigmas are drawn from a much narrower distribution than their
+# priors in the model.
 true.params.sim.df = data.frame(
   draw.id = 1,
   beta = rnorm(1, 0, 0.5),
-  sigma_gamma = abs(rcauchy(1, 0, 1)),
-  sigma_delta = abs(rcauchy(1, 0, 1)),
-  sigma_epsilon = abs(rcauchy(1, 0, 1))
+  sigma_gamma = abs(rcauchy(1, 0, 0.3)),
+  sigma_delta = abs(rcauchy(1, 0, 0.3)),
+  sigma_epsilon = abs(rcauchy(1, 0, 0.3))
 )
 true.params.sim.df[,paste("gamma.", sort(unique(obs.df$int.batch.id)), ".", sep = "")] =
   rnorm(length(unique(obs.df$int.batch.id)), 0, 1)
@@ -234,31 +245,32 @@ true.params.sim.long.df = true.params.sim.df %>%
 
 #### Simulated outcomes
 
-For each model, the simulated data includes only those effects that are actually modeled.  (I.e., for models that don't include subject-level effects, the simulation process doesn't have any subject-level effects.)  But, for reasons discussed below, let's also run a fifth simulation where we won't model subject-level effects when fitting the data (model 2), but where the simulated data *does* have subject-level effects (i.e., the structure of model 3).
+For each model, the simulated data includes only those effects that are actually modeled.  (I.e., for models that don't include subject-level effects, the simulation process doesn't have any subject-level effects.)
 
 ```{r simulate_outcomes, eval = F}
 # A utility function that simulates outcomes for a given model and a given set
 # of parameter draws; we'll use this both to generate outcomes for the
 # simulated datasets and to do posterior predictive checking.
-generate.outcomes = function(inputs.df, parameters.df, n.draws, model) {
+generate.outcomes = function(inputs.df, parameters.df, n.draws, generate.batch,
+                             generate.subject, generate.pair) {
   # Set up the dataframe to hold both inputs and generated outcomes.
   outputs.df = inputs.df
   # Create model matrices for batch, subject, and pair (if needed).
-  if(is.element(model, 2:4)) {
+  if(generate.batch) {
     mm.batch = model.matrix(~ factor(int.batch.id), outputs.df,
                             contrasts.arg =
                               list("factor(int.batch.id)" =
                                      contrasts(factor(outputs.df$int.batch.id),
                                                contrasts = F)))[,-1]
   }
-  if(is.element(model, 3:4)) {
+  if(generate.subject) {
     mm.subject = model.matrix(~ factor(int.subject.id), outputs.df,
                               contrasts.arg =
                                 list("factor(int.subject.id)" =
                                      contrasts(factor(outputs.df$int.subject.id),
                                                contrasts = F)))[,-1]
   }
-  if(is.element(model, 4)) {
+  if(generate.pair) {
     mm.pair = model.matrix(~ factor(int.pair.id), outputs.df,
                            contrasts.arg =
                              list("factor(int.pair.id)" =
@@ -270,7 +282,7 @@ generate.outcomes = function(inputs.df, parameters.df, n.draws, model) {
   # Create the matrix of data and the matrix of parameters.
   data.matrix = cbind(rep(1, nrow(outputs.df)))
   param.matrix = cbind(draws.df$beta)
-  if(is.element(model, 2:4)) {
+  if(generate.batch) {
     data.matrix = cbind(data.matrix,
                         mm.batch)
     param.matrix = cbind(param.matrix,
@@ -278,7 +290,7 @@ generate.outcomes = function(inputs.df, parameters.df, n.draws, model) {
                                          sort(unique(outputs.df$int.batch.id)),
                                          ".", sep = "")] * draws.df$sigma_gamma)
   }
-  if(is.element(model, 3:4)) {
+  if(generate.subject) {
     data.matrix = cbind(data.matrix,
                         mm.subject)
     param.matrix = cbind(param.matrix,
@@ -286,7 +298,7 @@ generate.outcomes = function(inputs.df, parameters.df, n.draws, model) {
                                          sort(unique(outputs.df$int.subject.id)),
                                          ".", sep = "")] * draws.df$sigma_delta)
   }
-  if(is.element(model, 4)) {
+  if(generate.pair) {
     data.matrix = cbind(data.matrix,
                         mm.pair)
     param.matrix = cbind(param.matrix,
@@ -314,16 +326,18 @@ generate.outcomes = function(inputs.df, parameters.df, n.draws, model) {
   return(outputs.df)
 }
 # Use the function to generate simulated outcomes for each of the four models.
-for(i in 1:5) {
-  model = simulations$model.for.generation[simulations$sim == i]
+for(i in 1:nrow(simulations)) {
   temp = generate.outcomes(sim.df %>%
                              dplyr::select(obs.id, int.batch.id,
                                            int.subject.id, int.pair.id),
-                           true.params.sim.df, 1, model)
+                           true.params.sim.df, 1,
+                           simulations$generate.batch[i],
+                           simulations$generate.subject[i],
+                           simulations$generate.pair[i])
   sim.df[,paste("prefer.bay.leaf", i, sep = ".")] = temp$prefer.bay.leaf.pred == 1
   sim.df[,paste("int.prefer.bay.leaf", i, sep = ".")] = temp$prefer.bay.leaf.pred
 }
-rm(i, model, temp)
+rm(i, temp)
 ```
 
 #### Fit the simulated data
@@ -331,36 +345,43 @@ rm(i, model, temp)
 ```{r fit_sim_data, eval = F, message = F, warning = F}
 # Create the datasets for Stan.
 sim.data.for.stan = list()
-for(i in 1:5) {
-  model = simulations$model.for.fitting[simulations$sim == i]
+for(i in 1:nrow(simulations)) {
   temp = list(N = nrow(sim.df),
               prefer_bay_leaf = sim.df[,paste("int.prefer.bay.leaf", i, sep = ".")])
-  if(is.element(model, 2:4)) {
+  if(simulations$fit.batch[i]) {
     temp[["I"]] = max(sim.df$int.batch.id)
     temp[["batch"]] = sim.df$int.batch.id
+  } else {
+    temp[["I"]] = 0
+    temp[["batch"]] = rep(1, nrow(sim.df))
   }
-  if(is.element(model, 3:4)) {
+  if(simulations$fit.subject[i]) {
     temp[["J"]] = max(sim.df$int.subject.id)
     temp[["subject"]] = sim.df$int.subject.id
+  } else {
+    temp[["J"]] = 0
+    temp[["subject"]] = rep(1, nrow(sim.df))
   }
-  if(is.element(model, 4)) {
+  if(simulations$fit.pair[i]) {
     temp[["K"]] = max(sim.df$int.pair.id)
     temp[["pair"]] = sim.df$int.pair.id
+  } else {
+    temp[["K"]] = 0
+    temp[["pair"]] = rep(1, nrow(sim.df))
   }
   sim.data.for.stan[[i]] = temp
 }
-rm(i, model, temp)
+rm(i, temp)
 # Fit each model.
 fit.sim.stan = list()
-for(i in 1:5) {
-  model = simulations$model.for.fitting[simulations$sim == i]
-  temp = stan(paste("bay_leaf_analysis_", model, ".stan", sep = ""),
+for(i in 1:nrow(simulations)) {
+  temp = stan("bay_leaf_analysis.stan",
               data = sim.data.for.stan[[i]],
               chains = 4, iter = 2000,
               control = list(adapt_delta = 0.99))
   fit.sim.stan[[i]] = temp
 }
-rm(i, model, temp)
+rm(i, temp)
 ```
 
 #### Check the fit of the simulated data
@@ -377,6 +398,7 @@ sampled.params.sim.df = bind_rows(lapply(fit.sim.stan,
                                                     function(x) {
                                                       data.frame(temp.array[,x,]) %>%
                                                         setNames(gsub("[[]|[]]", "\\.", colnames(.))) %>%
+                                                        setNames(gsub("^(sigma_[a-z]+)\\.1\\.$", "\\1", colnames(.))) %>%
                                                         rownames_to_column("iteration")
                                                       }),
                                              .id = "chain")
@@ -400,9 +422,7 @@ sampled.params.sim.long.df %>%
 
 #### Did the model capture the true parameter values?
 
-The model has done a decent job of capturing the true values of $\beta$, $\sigma_\gamma$, $\sigma_\delta$, and $\sigma_\epsilon$ (plotted in red).  But when we add subject-level effects, the model has a much harder time finding $\beta$; in these simulations, the effect of bay leaf would have to be huge in order for us to detect it with confidence.
-
-But there's good news.  In simulation 5 (which didn't model subject-level effects even though they were used to generate the data), $\beta$ is estimated with much more confidence, and the estimate appears to be just as accurate as the estimate in simulation 2.  ($\beta$ is slightly underestimated in all the models after the first one; this is because all the simulated $\gamma$ parameters happened to be negative.  Stan assigns some of that dispreference for bay leaf to $\beta$ instead of to all the individual $\gamma$s.)  All in all, this suggests that it should be safe to omit subject-level effects from the model, even if we strongly suspect that they might be present.
+The model has done a decent job of capturing the true values of $\beta$, $\sigma_\gamma$, $\sigma_\delta$, and $\sigma_\epsilon$ (plotted in red).  When we add batch-level effects, the model consistently underestimates $\beta$ by a small amount; this is because, out of the `r max(sim.df$int.batch.id)` $\gamma_i$s, `r sum(true.params.sim.long.df[grepl("^gamma", true.params.sim.long.df$parameter),]$true.value < 0)` happened to be simulated with negative values.  Stan assigns some of that dispreference for bay leaf to $\beta$ instead of to all the individual $\gamma_i$s.
 
 ```{r plot_sampled_sim_parameters_beta_sigma, message = F, warning = F, fig.width = 8, fig.height = 6}
 sampled.params.sim.long.df %>%
@@ -425,9 +445,7 @@ sampled.params.sim.long.df %>%
   scale_y_continuous("")
 ```
 
-<a name="simfit"></a>The model does less well in recovering the group-level intercepts $\gamma_i$, $\delta_j$, and $\epsilon_k$.  This isn't shocking, since we have so few observations for each group.  The shrinkage towards zero is especially obvious for the $\delta_j$ intercepts, and there seems to be a limit to how far from zero the model is capable of estimating at all.
-
-At any rate, the recovered parameter values are so unreliable that I'm reluctant to try to do much in the way of inference on the real data at all.  At best, if the samples for a given parameter are reliably on one side of zero, we might be able to conclude that there's a real effect of bay leaf in that group.  But *lack* of an effect should be interpreted with extreme caution, because of the wide credible intervals and the shrinkage toward zero.
+<a name="simfit"></a>The model does less well in recovering the group-level intercepts $\gamma_i$, $\delta_j$, and $\epsilon_k$.  This isn't shocking, since we have so few observations for each group.  Everything is shrunk towards zero.  At any rate, the recovered parameter values are so unreliable that I'm reluctant to try to do much in the way of inference on the real data at all.  At best, if the samples for a given parameter are reliably on one side of zero, we might be able to conclude that there's a real effect of bay leaf in that group.  But *lack* of an effect should be interpreted with extreme caution, because of the wide credible intervals and the shrinkage toward zero.
 
 ```{r plot_sampled_sim_group_parameters, message = F, warning = F, fig.width = 8, fig.height = 5}
 sampled.params.sim.long.df %>%
@@ -450,21 +468,23 @@ sampled.params.sim.long.df %>%
 
 #### Posterior predictive checks
 
-The predictions are...not great.  For such a small dataset, though, I suppose they could be worse.  Part of the problem is that we just can't make strong predictions about most of the data points.  Comfortingly, simulation 5 (with the simplified model 2 and the more complex data-generating process 3) seems to be no worse than any of the others.
+The predictions are surprisingly decent, although it's worth observing that this model is able to make somewhat stronger predictions than we're likely to be able to make with the real dataset.
 
 ```{r posterior_predictive_checks_sim, eval = F, message = F, warning = F}
 # Generate predicted outputs for the simulated data based on the fitted model.
-for(i in 1:5) {
-  model = simulations$model.for.fitting[simulations$sim == i]
+for(i in 1:nrow(simulations)) {
   temp = generate.outcomes(sim.df,
                            sampled.params.sim.df %>%
                              filter(simulation == i),
-                           1000, model) %>%
+                           1000,
+                           simulations$fit.subject[i],
+                           simulations$fit.batch[i],
+                           simulations$fit.pair[i]) %>%
     group_by(obs.id) %>%
-    summarize(mean.pred = mean(prefer.bay.leaf.pred))
+    summarize(mean.pred = mean(prefer.bay.leaf.pred, na.rm = T))
   sim.df[,paste("mean.pred", i, sep = ".")] = data.frame(temp)$mean.pred
 }
-rm(i, temp, model)
+rm(i, temp)
 ```
 
 ```{r plot_posterior_predictive_checks_sim, message = F, warning = F, fig.width = 6, fig.height = 10}
@@ -479,23 +499,27 @@ ggplot(sim.df %>%
   geom_jitter(height = 0.3, width = 0) +
   geom_abline(intercept = 0, slope = 1, col = "gray") +
   stat_smooth() +
-  facet_wrap(~ simulation, ncol = 1) +
+  facet_wrap(~ simulation, ncol = 1, scales = "free_y") +
   scale_x_continuous("mean predicted preference for bay leaf") +
   scale_y_continuous("actual choice")
 ```
 
-### Fit the real data
+### Real data
 
-We'll fit the real dataset with batch-level effects only, not subject- or pair-level effects.
+We'll fit the real dataset with batch- and subject-level effects only, not pair-level effects.  Even the estimated subject-level effects should be treated with extreme caution.
 
 ```{r fit_real_data, eval = F, message = F, warning = F}
 # Create the dataset for Stan.
 data.for.stan = list(N = nrow(obs.df[!is.na(obs.df$prefer.bay.leaf),]),
                      I = max(obs.df[!is.na(obs.df$prefer.bay.leaf),]$int.batch.id),
+                     J = max(obs.df[!is.na(obs.df$prefer.bay.leaf),]$int.subject.id),
+                     K = 0,
                      batch = obs.df[!is.na(obs.df$prefer.bay.leaf),]$int.batch.id,
+                     subject = obs.df[!is.na(obs.df$prefer.bay.leaf),]$int.subject.id,
+                     pair = rep(1, nrow(obs.df[!is.na(obs.df$prefer.bay.leaf),])),
                      prefer_bay_leaf = obs.df[!is.na(obs.df$prefer.bay.leaf),]$int.prefer.bay.leaf)
 # Fit the model.
-fit.stan = stan("bay_leaf_analysis_2.stan",
+fit.stan = stan("bay_leaf_analysis.stan",
                 data = data.for.stan,
                 chains = 4, iter = 2000,
                 control = list(adapt_delta = 0.99))
@@ -515,6 +539,7 @@ stan_trace(fit.stan)
 # Extract the sampled parameter values from the model fit.
 sampled.params.df = as.data.frame(fit.stan) %>%
   setNames(gsub("[[]|[]]", "\\.", colnames(.))) %>%
+  setNames(gsub("^(sigma_[a-z]+)\\.1\\.$", "\\1", colnames(.))) %>%
   rownames_to_column("draw.id")
 sampled.params.long.df = sampled.params.df %>%
   gather(parameter, sampled.value, -draw.id) %>%
@@ -523,13 +548,13 @@ sampled.params.long.df = sampled.params.df %>%
 # Generate predicted outputs for the real data based on the fitted model.
 pred.df = generate.outcomes(obs.df[!is.na(obs.df$prefer.bay.leaf),],
                             sampled.params.df,
-                            1000, 2) %>%
+                            1000, T, T, F) %>%
   group_by(obs.id) %>%
   summarize(mean.pred = mean(prefer.bay.leaf.pred)) %>%
   inner_join(obs.df, by = c("obs.id"))
 ```
 
-The posterior predictions actually look pretty good, especially compared to the simlations.  But it's worth noticing that the predictions fall within a really narrow range -- from `r round(min(pred.df$mean.pred) * 100)`% to `r round(max(pred.df$mean.pred) * 100)`%.  Could it be that we're just seeing a model that, much of the time, correctly predicts "meh"?
+The posterior predictions actually look pretty good.  But across the entire dataset, the predicted probability of preferring bay leaf falls within a really narrow range -- from `r round(min(pred.df$mean.pred) * 100)`% to `r round(max(pred.df$mean.pred) * 100)`%.  Could it be that we're just seeing a model that, much of the time, correctly predicts "meh"?  (Even within this narrow range, the model's predictions appear to be more conservative than required by the actual data: at the high end, subjects are even more likely to prefer bay leaf than predicted; at the low end, they're even less likely.)
 
 ```{r plot_posterior_predictive_checks, message = F, warning = F, fig.width = 6, fig.height = 4}
 # Plot the predicted vs. real outcomes.
@@ -563,7 +588,7 @@ sampled.params.long.df %>%
   scale_y_continuous("number of samples")
 ```
 
-### What about particular batches or subjects?
+### What about particular batches?
 
 But wait: maybe the bay leaf was overwhelmed by other ingredients in the recipe for some batches, or the bay leaf used in some batches was too old.  Is there any evidence that people could systematically detect the bay leaf in specific batches?  <span style="color:red">**Nope.**</span>  All the batches trend in the right direction (over 50% preference for bay leaf), but there's no batch where we can reliably say that people chose the portion with bay leaf more than half the time.
 

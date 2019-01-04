@@ -1,7 +1,7 @@
 ---
 title: "The Great Bay Leaf Experiment"
 author: "Abby Kaplan"
-date: "December 7, 2018"
+date: "January 4, 2019"
 output: html_document
 ---
 
@@ -206,7 +206,7 @@ For a large dataset, I would create a much smaller simulated dataset with inputs
 ```{r simulate_inputs, eval = F}
 # Set up a dataframe for simulated data.
 sim.df = obs.df %>%
-  filter(!is.na(prefer.bay.leaf)) %>%
+  filter(!is.na(obs.df$prefer.bay.leaf)) %>%
   dplyr::select(obs.id, int.batch.id, int.subject.id, int.pair.id)
 # List the simulations we're going to run, and their properties.
 simulations = data.frame(
@@ -325,7 +325,7 @@ generate.outcomes = function(inputs.df, parameters.df, n.draws, generate.batch,
                   prefer.bay.leaf.pred)
   return(outputs.df)
 }
-# Use the function to generate simulated outcomes for each of the four models.
+# Use the function to generate simulated outcomes for each of the models.
 for(i in 1:nrow(simulations)) {
   temp = generate.outcomes(sim.df %>%
                              dplyr::select(obs.id, int.batch.id,
@@ -386,29 +386,69 @@ rm(i, temp)
 
 #### Check the fit of the simulated data
 
-There were no divergent transitions.  The chains are stationary and well mixed.
-
-```{r plot_sim_chains, message = F, warning = F, fig.width = 12, fig.height = 9}
+```{r extract_sim_results, message = F, warning = F}
+# Extract divergent transitions and treedepth.
+sampler.diagnostics.sim.df = bind_rows(
+  lapply(
+    fit.sim.stan,
+    function(x) {
+      bind_rows(
+        lapply(
+          get_sampler_params(x, inc_warmup = F),
+          function(y) {
+            data.frame(y)
+          }
+        ),
+        .id ="chain"
+      )
+    }
+  ),
+  .id = "model"
+)
+# Extract n_eff and Rhat for each parameter.
+summary.params.sim.df = bind_rows(
+  lapply(
+    fit.sim.stan,
+    function(x) {
+      data.frame(t(summary(x)$summary[,c("n_eff", "Rhat")])) %>%
+        setNames(gsub("[[]|[]]", "\\.", colnames(.))) %>%
+        rownames_to_column("summary.statistic") %>%
+        gather(parameter, value, -summary.statistic) %>%
+        spread(summary.statistic, value)
+    }
+  ),
+  .id = "model"
+)
 # Extract the sampled parameter values.
-sampled.params.sim.df = bind_rows(lapply(fit.sim.stan,
-                                         function(x) {
-                                           temp.array = as.array(x)
-                                           temp.df = bind_rows(
-                                             lapply(1:4,
-                                                    function(x) {
-                                                      data.frame(temp.array[,x,]) %>%
-                                                        setNames(gsub("[[]|[]]", "\\.", colnames(.))) %>%
-                                                        setNames(gsub("^(sigma_[a-z]+)\\.1\\.$", "\\1", colnames(.))) %>%
-                                                        rownames_to_column("iteration")
-                                                      }),
-                                             .id = "chain")
-                                           return(temp.df)
-                                           }),
-                                  .id = "simulation")
+sampled.params.sim.df = bind_rows(
+  lapply(
+    fit.sim.stan,
+    function(x) {
+      temp.array = as.array(x)
+      temp.df = bind_rows(
+        lapply(
+          1:nrow(simulations),
+          function(x) {
+            data.frame(temp.array[,x,]) %>%
+              setNames(gsub("[[]|[]]", "\\.", colnames(.))) %>%
+              setNames(gsub("^(sigma_[a-z]+)\\.1\\.$", "\\1", colnames(.))) %>%
+              rownames_to_column("iteration")
+            }),
+        .id = "chain")
+      return(temp.df)
+    }
+  ),
+  .id = "simulation"
+)
 sampled.params.sim.long.df = sampled.params.sim.df %>%
   gather(parameter, sampled.value, -simulation, -chain, -iteration) %>%
   filter(parameter != "lp__" & !is.na(sampled.value)) %>%
   mutate(parameter.group = gsub("^(gamma|delta|epsilon).*", "\\1", parameter))
+```
+
+There were `r sum(sampler.diagnostics.sim.df$divergent__)` divergent transitions across all `r nrow(simulations)` models.  The chains are stationary and well mixed.  No parameter in any model had an Rhat greater than `r round(max(summary.params.sim.df$Rhat[summary.params.sim.df$parameter != "lp__"]), 4)` or an n_eff less than `r floor(min(summary.params.sim.df$n_eff[summary.params.sim.df$parameter != "lp__"]))`.
+
+```{r plot_sim_chains, message = F, warning = F, fig.width = 12, fig.height = 9}
 # Plot the chains.
 sampled.params.sim.long.df %>%
   filter(grepl("beta|sigma", parameter)) %>%
@@ -468,7 +508,7 @@ sampled.params.sim.long.df %>%
 
 #### Posterior predictive checks
 
-The predictions are surprisingly decent, although it's worth observing that this model is able to make somewhat stronger predictions than we're likely to be able to make with the real dataset.
+The predictions are...not great.  For such a small dataset, though, I suppose they could be worse.  Part of the problem is that we just can't make strong predictions about most of the data points.
 
 ```{r posterior_predictive_checks_sim, eval = F, message = F, warning = F}
 # Generate predicted outputs for the simulated data based on the fitted model.
@@ -496,7 +536,7 @@ ggplot(sim.df %>%
          mutate(measure = gsub("\\.[0-9]", "", measure)) %>%
          spread(measure, value),
        aes(x = mean.pred, y = int.prefer.bay.leaf)) +
-  geom_jitter(height = 0.3, width = 0) +
+  geom_jitter(height = 0.1, width = 0) +
   geom_abline(intercept = 0, slope = 1, col = "gray") +
   stat_smooth() +
   facet_wrap(~ simulation, ncol = 1, scales = "free_y") +
@@ -527,15 +567,23 @@ fit.stan = stan("bay_leaf_analysis.stan",
 
 #### Check the fit of the model
 
-No divergent transitions.  The chains look great.
-
-```{r plot_chains, echo = F, message = F, warning = F, fig.width = 12, fig.height = 8}
-stan_trace(fit.stan)
-```
-
-#### Posterior predictive checks
-
-```{r posterior_predictive_checks, message = F, warning = F}
+```{r extract_real_results, echo = F, message = F, warning = F}
+# Extract divergent transitions and treedepth.
+sampler.diagnostics.df = bind_rows(
+  lapply(
+    get_sampler_params(fit.stan, inc_warmup = F),
+    function(x) {
+      data.frame(x)
+    }
+  ),
+  .id ="chain"
+)
+# Extract n_eff and Rhat for each parameter.
+summary.params.df = data.frame(t(summary(fit.stan)$summary[,c("n_eff", "Rhat")])) %>%
+  setNames(gsub("[[]|[]]", "\\.", colnames(.))) %>%
+  rownames_to_column("summary.statistic") %>%
+  gather(parameter, value, -summary.statistic) %>%
+  spread(summary.statistic, value)
 # Extract the sampled parameter values from the model fit.
 sampled.params.df = as.data.frame(fit.stan) %>%
   setNames(gsub("[[]|[]]", "\\.", colnames(.))) %>%
@@ -545,6 +593,17 @@ sampled.params.long.df = sampled.params.df %>%
   gather(parameter, sampled.value, -draw.id) %>%
   mutate(parameter.group =  gsub("^.*(beta|gamma|delta|epsilon).*$", "\\1", parameter),
          parameter.num = as.numeric(gsub("^.*\\.([0-9]+)\\..*$", "\\1", parameter)))
+```
+
+There were `r sum(sampler.diagnostics.df$divergent__)` divergent transitions.  The chains are stationary and well mixed.  No parameter had an Rhat greater than `r round(max(summary.params.df$Rhat[summary.params.df$parameter != "lp__"]), 4)` or an n_eff less than `r floor(min(summary.params.df$n_eff[summary.params.df$parameter != "lp__"]))`.
+
+```{r plot_chains, echo = F, message = F, warning = F, fig.width = 12, fig.height = 8}
+stan_trace(fit.stan)
+```
+
+#### Posterior predictive checks
+
+```{r posterior_predictive_checks, message = F, warning = F}
 # Generate predicted outputs for the real data based on the fitted model.
 pred.df = generate.outcomes(obs.df[!is.na(obs.df$prefer.bay.leaf),],
                             sampled.params.df,
@@ -554,12 +613,12 @@ pred.df = generate.outcomes(obs.df[!is.na(obs.df$prefer.bay.leaf),],
   inner_join(obs.df, by = c("obs.id"))
 ```
 
-The posterior predictions actually look pretty good.  But across the entire dataset, the predicted probability of preferring bay leaf falls within a really narrow range -- from `r round(min(pred.df$mean.pred) * 100)`% to `r round(max(pred.df$mean.pred) * 100)`%.  Could it be that we're just seeing a model that, much of the time, correctly predicts "meh"?  (Even within this narrow range, the model's predictions appear to be more conservative than required by the actual data: at the high end, subjects are even more likely to prefer bay leaf than predicted; at the low end, they're even less likely.)
+The posterior predictions actually look pretty good.  But across the entire dataset, the predicted probability of preferring bay leaf falls within a really narrow range -- from `r round(min(pred.df$mean.pred) * 100)`% to `r round(max(pred.df$mean.pred) * 100)`%.  Could it be that we're just seeing a model that, much of the time, correctly predicts "meh"?  (Even within this narrow range, the model's predictions are more conservative than required by the actual data: at the high end, subjects are even more likely to prefer bay leaf than predicted; at the low end, they're even less likely.)
 
 ```{r plot_posterior_predictive_checks, message = F, warning = F, fig.width = 6, fig.height = 4}
 # Plot the predicted vs. real outcomes.
 ggplot(pred.df, aes(x = mean.pred, y = int.prefer.bay.leaf)) +
-  geom_jitter(height = 0.3, width = 0) +
+  geom_jitter(height = 0.1, width = 0) +
   geom_abline(intercept = 0, slope = 1, col = "gray") +
   stat_smooth() +
   scale_x_continuous("mean predicted preference for bay leaf") +

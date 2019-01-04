@@ -1,0 +1,74 @@
+---
+title: "\"My First Stan Model\""
+subtitle: "Do Bay Leaves Do Any Good?"
+author: "Abby Kaplan"
+date: "January 10, 2018"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r setup, include = FALSE}
+library(dplyr)
+library(tibble)
+library(kableExtra)
+library(ggplot2)
+options(htmltools.dir.version = FALSE)
+theme_update(axis.title.x = element_text(size = 20),
+             axis.title.y = element_text(size = 20),
+             axis.text = element_text(size = 15))
+```
+
+class: center, middle
+
+## "My First Experiment"
+
+---
+class: center, middle
+
+## "My First ~~Experiment~~ Stan Model"
+
+---
+class: center, middle
+
+![](bay_leaves.jpg)
+
+---
+class: center, middle
+
+![](experiment_setup_small.png)
+
+---
+class: center, middle
+
+```{r load_data, echo = F, message = F, warning = F}
+# Load the raw data from csv files.  The first file has observation-level data;
+# the second has batch-level data.
+obs.df = read.csv("bay_leaf_observations.csv")
+batch.df = read.csv("bay_leaf_batches.csv")
+# Add IDs to the rows in the observation-level data; useful for associating a
+# single observation with multiple posterior predictions later.
+obs.df = obs.df %>%
+  rownames_to_column("obs.id")
+# Prepare the data for Stan: convert IDs and outcomes to integers.  (They
+# should already be integers, but just in case.)
+obs.df = obs.df %>%
+  mutate(int.batch.id = as.numeric(as.factor(batch.id)),
+         int.subject.id = as.numeric(as.factor(subject.id)),
+         int.pair.id = as.numeric(as.factor(pair.id)),
+         int.prefer.bay.leaf = ifelse(prefer.bay.leaf , 1, 0))
+```
+
+```{r plot_raw_data, echo = F, message = F, warning = F, fig.width = 6, fig.height = 6}
+ggplot(obs.df, aes(x = prefer.bay.leaf)) +
+  geom_bar() +
+  scale_x_discrete("preferred bay leaf") +
+  scale_y_continuous("number of observations")
+```
+
+
+

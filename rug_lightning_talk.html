@@ -4,9 +4,10 @@
     <title>My First Stan Model</title>
     <meta charset="utf-8">
     <meta name="author" content="Abby Kaplan" />
-    <meta name="date" content="2018-01-10" />
+    <meta name="date" content="2019-01-10" />
     <link href="libs/remark-css/default.css" rel="stylesheet" />
     <link href="libs/remark-css/default-fonts.css" rel="stylesheet" />
+    <script src="libs/kePrint/kePrint.js"></script>
   </head>
   <body>
     <textarea id="source">
@@ -15,7 +16,7 @@ class: center, middle, inverse, title-slide
 # “My First Stan Model”
 ## Do Bay Leaves Do Any Good?
 ### Abby Kaplan
-### January 10, 2018
+### January 10, 2019
 
 ---
 
@@ -44,9 +45,791 @@ class: center, middle
 ---
 class: center, middle
 
-
-
 ![](rug_lightning_talk_files/figure-html/plot_raw_data-1.png)&lt;!-- --&gt;
+
+---
+
+## The model
+
+`$$\mbox{prefer.bay.leaf} = \mbox{Bernoulli}(\mbox{logit}^{-1}(\beta + \gamma_i\sigma_{\gamma} + \delta_j\sigma_{\delta}))$$`
+
+--
+
+* `\(\beta\)`: overall intercept
+
+--
+
+* `\(\gamma_i\)`: intercept for batch `\(i\)`
+* `\(\sigma_{\gamma}\)`: standard deviation of `\(\gamma_i\)`
+
+--
+
+* `\(\delta_j\)`: intercept for subject `\(j\)`
+* `\(\sigma_{\delta}\)`: standard deviation of `\(\delta_j\)`
+
+--
+
+`$$\beta \sim \mbox{N}(0, 2)$$`
+
+--
+
+`$$\gamma_i, \delta_j \sim \mbox{N}(0, 1)$$`
+
+--
+
+`$$\sigma_{\gamma}, \sigma_{\delta} \in [0,\inf] \sim \mbox{Cauchy}(0, 1)$$`
+
+---
+
+## What Stan gives you
+
+.center[
+&lt;table class="table" style="font-size: 12px; margin-left: auto; margin-right: auto;"&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; sample &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; beta &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.1. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.2. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.3. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.4. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; sigma_gamma &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; delta.1. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; delta.2. &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; ... &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0381603 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.5866505 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.7717493 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1951042 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1842853 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1286942 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.9239049 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6042314 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 2 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.2626396 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3976282 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0257513 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.0893670 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.7284009 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4963586 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0957525 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.2964409 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 3 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1140987 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.5158181 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8393754 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.5553642 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4570358 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.5793863 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1001774 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.7797288 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.8345731 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.3933963 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.2986723 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.1892198 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8657181 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9091757 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -2.0567760 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.3299187 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 5 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.7405298 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1480183 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8649021 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.3578496 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.9145567 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6320696 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.2670545 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.3615715 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 6 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6651553 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.1847768 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.7090246 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.0886230 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.7304895 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4295265 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.1094154 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.3284828 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 7 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.9446587 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6964131 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3959616 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6783410 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.7992607 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9157164 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.9395835 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.9652781 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 8 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.5688823 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.7402765 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.1801935 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0955702 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.0452409 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.2957341 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.3606070 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.4098481 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 9 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.1633767 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.5247243 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.4510800 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1383595 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8334814 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9092710 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0772841 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.4462531 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3588886 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.3746020 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0798747 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6042118 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.6485768 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1092848 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.1794727 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.5398320 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 11 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1585778 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.5717858 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.1179175 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4109562 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.2118042 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.7897882 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0583793 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.5520460 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 12 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3136630 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.7874952 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.6955751 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1958716 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3913952 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4845534 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.2037558 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.5467309 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 13 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0404615 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9990253 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.2931172 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.1747395 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4294918 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.5587113 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.4359608 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0125138 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 14 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1788236 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.3799278 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0026268 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.6759536 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.2857618 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.2832233 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.8629497 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.6790301 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 15 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3600137 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3479470 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.3522211 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.8713164 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.3963604 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0634831 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.2731816 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4896202 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; ... &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+]
+
+(Plus various summary statistics, diagnostics, etc.)
+
+---
+
+## Exploring a single parameter
+
+.center[
+![](rug_lightning_talk_files/figure-html/plot_beta-1.png)&lt;!-- --&gt;
+]
+
+---
+
+## Exploring a single parameter
+
+.center[
+![](rug_lightning_talk_files/figure-html/plot_beta_transformed-1.png)&lt;!-- --&gt;
+]
+
+---
+
+## Exploring multiple parameters together
+
+.center[
+&lt;table class="table" style="font-size: 12px; margin-left: auto; margin-right: auto;"&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; sample &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; beta &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.1. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.2. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.3. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.4. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; sigma_gamma &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0381603 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; -0.5866505 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.7717493 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1951042 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1842853 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1286942 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 2 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.2626396 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.3976282 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0257513 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.0893670 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.7284009 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4963586 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 3 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1140987 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.5158181 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8393754 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.5553642 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4570358 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.5793863 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 4 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.8345731 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; -0.3933963 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.2986723 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.1892198 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8657181 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9091757 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 5 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.7405298 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.1480183 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8649021 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.3578496 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.9145567 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6320696 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 6 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6651553 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; -0.1847768 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.7090246 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.0886230 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.7304895 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4295265 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 7 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.9446587 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.6964131 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3959616 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6783410 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.7992607 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9157164 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 8 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.5688823 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; -0.7402765 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.1801935 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0955702 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.0452409 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.2957341 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 9 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.1633767 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.5247243 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.4510800 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1383595 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8334814 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9092710 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3588886 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; -1.3746020 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0798747 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6042118 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.6485768 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1092848 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 11 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1585778 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.5717858 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.1179175 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4109562 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.2118042 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.7897882 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 12 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3136630 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.7874952 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.6955751 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1958716 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3913952 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4845534 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 13 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0404615 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.9990253 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.2931172 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.1747395 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4294918 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.5587113 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 14 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1788236 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; -0.3799278 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0026268 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.6759536 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.2857618 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.2832233 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 15 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3600137 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.3479470 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.3522211 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.8713164 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.3963604 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0634831 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+]
+
+---
+
+## Exploring multiple parameters together
+
+.center[
+&lt;table class="table" style="font-size: 12px; margin-left: auto; margin-right: auto;"&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; sample &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; beta &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.1. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.2. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.3. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.4. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; sigma_gamma &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.0381603 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; -0.5866505 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.7717493 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1951042 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1842853 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.1286942 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 2 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.2626396 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.3976282 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0257513 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.0893670 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.7284009 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.4963586 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 3 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.1140987 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.5158181 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8393754 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.5553642 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4570358 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.5793863 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 4 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.8345731 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; -0.3933963 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.2986723 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.1892198 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8657181 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.9091757 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 5 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.7405298 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.1480183 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8649021 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.3578496 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.9145567 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.6320696 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 6 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.6651553 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; -0.1847768 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.7090246 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.0886230 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.7304895 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.4295265 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 7 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; -0.9446587 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.6964131 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3959616 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6783410 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.7992607 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.9157164 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 8 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.5688823 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; -0.7402765 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.1801935 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0955702 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.0452409 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.2957341 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 9 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 1.1633767 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.5247243 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.4510800 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1383595 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8334814 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.9092710 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.3588886 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; -1.3746020 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0798747 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6042118 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.6485768 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.1092848 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 11 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.1585778 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.5717858 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.1179175 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4109562 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.2118042 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.7897882 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 12 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.3136630 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.7874952 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.6955751 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1958716 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3913952 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.4845534 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 13 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.0404615 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.9990253 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.2931172 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.1747395 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4294918 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.5587113 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 14 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.1788236 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; -0.3799278 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0026268 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.6759536 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.2857618 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.2832233 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 15 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.3600137 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.3479470 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.3522211 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.8713164 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.3963604 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 1.0634831 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+]
+
+probability of preferring bay leaf in batch 1: `\(\mbox{logit}^{-1}(\beta + \gamma_1\sigma_{\gamma})\)`
+
+---
+
+## Exploring multiple parameters together
+
+.center[
+![](rug_lightning_talk_files/figure-html/plot_gamma_correlations-1.png)&lt;!-- --&gt;
+]
+
+---
+
+## Exploring multiple parameters together
+
+.center[
+&lt;table class="table" style="font-size: 12px; margin-left: auto; margin-right: auto;"&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; sample &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; beta &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.1. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.2. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.3. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; gamma.4. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; sigma_gamma &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; batch.1.prob &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 1 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.0381603 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; -0.5866505 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.7717493 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1951042 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1842853 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.1286942 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.4906665 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 2 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.2626396 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.3976282 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0257513 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.0893670 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.7284009 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.4963586 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.6130156 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 3 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.1140987 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.5158181 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8393754 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.5553642 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4570358 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.5793863 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.6017966 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 4 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.8345731 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; -0.3933963 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.2986723 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.1892198 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8657181 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.9091757 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.6170172 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 5 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.7405298 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.1480183 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8649021 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.3578496 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.9145567 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.6320696 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.6972185 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 6 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.6651553 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; -0.1847768 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.7090246 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.0886230 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.7304895 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.4295265 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.6423983 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 7 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; -0.9446587 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.6964131 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3959616 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6783410 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.7992607 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.9157164 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.4238614 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 8 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.5688823 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; -0.7402765 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.1801935 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0955702 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.0452409 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.2957341 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.5866072 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 9 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 1.1633767 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.5247243 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.4510800 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1383595 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.8334814 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.9092710 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.8376020 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.3588886 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; -1.3746020 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0798747 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.6042118 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.6485768 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.1092848 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.5519779 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 11 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.1585778 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.5717858 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.1179175 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4109562 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.2118042 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.7897882 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.6479790 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 12 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.3136630 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.7874952 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.6955751 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1958716 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.3913952 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.4845534 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.6671330 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 13 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.0404615 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.9990253 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.2931172 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.1747395 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.4294918 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.5587113 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.6453424 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 14 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.1788236 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; -0.3799278 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0026268 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.6759536 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.2857618 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.2832233 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.5177973 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 15 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.3600137 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 0.3479470 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.3522211 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.8713164 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.3963604 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #CCEECC;"&gt; 1.0634831 &lt;/td&gt;
+   &lt;td style="text-align:right;background-color: #90EE90;"&gt; 0.6748161 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+]
+
+probability of preferring bay leaf in batch 1: `\(\mbox{logit}^{-1}(\beta + \gamma_1\sigma_{\gamma})\)`
+
+---
+
+## Exploring multiple parameters together
+
+.center[
+![](rug_lightning_talk_files/figure-html/plot_batch_intercepts-1.png)&lt;!-- --&gt;
+]
+
+---
+class: middle
+
+# Working with samples transforms a problem of integral calculus into a problem of data summary.
+
+Richard McElreath, _Statistical Rethinking: A Bayesian Course with Examples in R and Stan_, p. 68
+
+---
+class: middle
+
+GitHub repository:
+
+https://github.com/kaplanas/Bay-Leaf-Experiment
+
+GitPages write-up:
+
+https://kaplanas.github.io/Bay-Leaf-Experiment/bay_leaf_analysis.html
+
+this presentation:
+
+https://kaplanas.github.io/Bay-Leaf-Experiment/rug_lightning_talk.html
     </textarea>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
 <script>var slideshow = remark.create({
